@@ -2,7 +2,6 @@
 <html>
 <head>
     <title>Woordle - Juego</title>
-    <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
     <div id="game-container">
@@ -37,6 +36,7 @@
         <h2>Palabras acertadas:</h2>
         <ul id="guessed-words"></ul>
     </div>
+</body>
 </html>
 <script>
 var remainingAttempts = 3;
@@ -49,7 +49,11 @@ var score = 0;
 
 function updateHiddenWord(event) {
     var input = event.target;
-    var guess = input.value.toUpperCase();
+    var guess = input.value.trim().toUpperCase();
+    if (!/^[A-Z]$/.test(guess)) {
+        input.value = '';
+        return;
+    }
     input.removeEventListener('keyup', updateHiddenWord);
 
     var newHiddenWord = '';
@@ -85,9 +89,21 @@ function updateHiddenWord(event) {
         checkWord();
     } else {
         var nextInput = document.querySelector('tr:nth-of-type(' + currentRow + ') input:nth-of-type(' + currentInput + ')');
-        nextInput.focus();
+        if (nextInput) {
+            nextInput.focus();
+        } else {
+            currentRow++;
+            currentInput = 1;
+            if (currentRow > 4) {
+                resetGame();
+            } else {
+                var firstInput = document.querySelector('tr:nth-of-type(' + currentRow + ') input:nth-of-type(1)');
+                firstInput.focus();
+            }
+        }
     }
 }
+
 
 function checkWord() {
     var currentGuess = hiddenWord.textContent.toUpperCase();
@@ -101,6 +117,10 @@ function checkWord() {
         newGuessedWord.textContent = currentGuess;
         guessedWordsList.appendChild(newGuessedWord);
         resetRow();
+        if (correctWords.length === 4) {
+            alert('¡Has completado todas las filas pero no has adivinado la palabra completa! La palabra era ' + word);
+            resetGame();
+        }
     } else if (remainingAttempts === 1) {
         alert('¡Lo siento, has perdido! La palabra era ' + word);
         resetGame();
@@ -123,63 +143,32 @@ function resetRow() {
         input.value = '';
         input.addEventListener('keyup', updateHiddenWord);
     });
-    if (!wordFound) {
-        score--;
-        document.getElementById('game-score').textContent = score;
-    }
-    currentRow++;
-    currentInput = 1;
-    if (currentRow > 4) {
-        resetGame();
-    } else {
-        var firstInput = document.querySelector('tr:nth-of-type(' + currentRow + ') input:nth-of-type(1)');
-        firstInput.focus();
-    }
 }
 
 function resetGame() {
-    hiddenWord.textContent = '{{ $hiddenWord }}';
-    hiddenWord.setAttribute('data-word', '{{ $word->word }}');
-    if (correctWords.length > 0) {
-        document.getElementById('game-messages').textContent = 'Palabras acertadas: ' + correctWords.join(', ');
-    }
-
     remainingAttempts = 3;
+    gameOver = false;
+    document.getElementById('remaining-attempts').textContent = 'Intentos restantes: ' + remainingAttempts;
+    hiddenWord.textContent = hiddenWord.getAttribute('data-word');
+    for (var i = 0; i < 5; i++) {
+        var rowInputs = document.querySelectorAll('tr:nth-of-type(' + (i + 1) + ') input[type="text"]');
+        rowInputs.forEach(function(input) {
+            input.disabled = false;
+            input.style.backgroundColor = 'white';
+            input.value = '';
+            input.addEventListener('keyup', updateHiddenWord);
+        });
+    }
     currentRow = 1;
     currentInput = 1;
     correctWords = [];
     score = 0;
-
     document.getElementById('game-score').textContent = score;
-    document.getElementById('remaining-attempts').textContent = 'Intentos restantes: ' + remainingAttempts;
-
-    var inputs = document.querySelectorAll('input[type="text"]');
-    inputs.forEach(function(input) {
-        input.disabled = false;
-        input.style.backgroundColor = 'white';
-        input.value = '';
-        input.addEventListener('keyup', updateHiddenWord);
-    });
-
-    hiddenWord.textContent = document.getElementById('hidden-word').getAttribute('data-word');
-    var firstInput = document.querySelector('tr:nth-of-type(1) input:nth-of-type(1)');
-    firstInput.focus();
-
-    var guessedWordsList = document.getElementById('guessed-words');
-    guessedWordsList.innerHTML = '';
-
-    document.getElementById('game-messages').textContent = '';
-
-    var resetButton = document.getElementById('reset-button');
-    resetButton.disabled = false;
-    resetButton.textContent = 'Reiniciar juego';
-
-    clearInterval(timer);
-    timeLeft = 60;
-    document.getElementById('game-timer').textContent = timeLeft;
-    timer = setInterval(updateTimer, 1000);
+    document.getElementById('guessed-words').innerHTML = '';
 }
 
+
+resetGame()
 function guessLetter() {
 var input = document.getElementById('word-input').value.toLowerCase();
 if (input.length !== 1 || !isLetter(input)) {
@@ -217,6 +206,20 @@ return /[a-z]/.test(char);
 function chooseWord(wordsArray) {
 return wordsArray[Math.floor(Math.random() * wordsArray.length)];
 }
+
+function updateTimer() {
+    var timerElement = document.getElementById('game-timer');
+    var timeLeft = parseInt(timerElement.textContent);
+    if (timeLeft === 0) {
+        alert('¡Se acabó el tiempo!');
+        resetGame();
+    } else {
+        timeLeft--;
+        timerElement.textContent = timeLeft;
+        setTimeout(updateTimer, 1000);
+    }
+}
+
 
 function startGame() {
   // Reset game state

@@ -28,7 +28,7 @@ class GameController extends Controller
 
         $guess = strtoupper($request->guess);
         $word = DB::table('words')->first();
-        $hiddenWord = str_split($request->session()->get('hiddenWord')); // Se convierte en un array para poder modificarlo
+        $hiddenWord = str_split($request->session()->get('hiddenWord')); 
         $guesses = $request->session()->get('guesses');
         $remainingAttempts = $request->session()->get('remainingAttempts');
 
